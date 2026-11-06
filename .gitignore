@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+artifacts/*
+!artifacts/.gitkeep
+data/wormlab.db*
+*.egg-info/
+node_modules/
+apps/web/dist/
+.env

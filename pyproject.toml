@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wormlab-rl"
+version = "0.1.0"
+description = "WormLab RL: deterministic worm puzzle, exact BFS solver, certified generator, MaskablePPO agent"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy==2.3.5",
+  "gymnasium==0.29.1",
+  "stable-baselines3==2.3.2",
+  "sb3-contrib==2.3.0",
+  "fastapi==0.135.3",
+  "pydantic==2.13.5",
+  "uvicorn==0.44.0",
+  "pyyaml==6.0.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "httpx==0.28.1"]
+
+[tool.setuptools.packages.find]
+where = ["packages", "."]
+include = ["worm_core*", "solver*", "generator*", "rl_env*", "storage*", "ml*", "services*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["packages", "."]
+testpaths = ["tests"]
+markers = ["slow: long-running tests (training, large batches)"]
