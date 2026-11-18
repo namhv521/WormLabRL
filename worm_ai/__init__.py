@@ -1,0 +1,43 @@
+"""WormLabRL AI Package: Continual RL Solver, Exact Oracle, PCGRL Designer & Studio."""
+
+from .physics import (
+    ACTION_DELTAS,
+    ACTION_NAMES,
+    ACTIONS,
+    BLOCKED_EVENTS,
+    FATAL_EVENTS,
+    GRID_CHANNELS,
+    ACTION_FEATURES,
+    H,
+    W,
+    MAX_STEPS,
+    LevelArena,
+    auto_orient_hazard,
+    bricks_from_components,
+    geometry_signature,
+    load_dataset,
+    load_levels_json,
+    mirror_arena_and_trace,
+    validate_initial_level,
+)
+
+__all__ = [
+    "ACTION_DELTAS",
+    "ACTION_NAMES",
+    "ACTIONS",
+    "BLOCKED_EVENTS",
+    "FATAL_EVENTS",
+    "GRID_CHANNELS",
+    "ACTION_FEATURES",
+    "H",
+    "W",
+    "MAX_STEPS",
+    "LevelArena",
+    "auto_orient_hazard",
+    "bricks_from_components",
+    "geometry_signature",
+    "load_dataset",
+    "load_levels_json",
+    "mirror_arena_and_trace",
+    "validate_initial_level",
+]

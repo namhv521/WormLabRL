@@ -1,10 +1,46 @@
+# Byte-compiled / caches
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .pytest_cache/
-artifacts/*
-!artifacts/.gitkeep
-data/wormlab.db*
-*.egg-info/
-node_modules/
-apps/web/dist/
-.env
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS / IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary & runtime scratch files
+*.tmp
+*.log
+*.replay.json
+checkpoints/worm_brain_live.pt
+checkpoints/worm_brain_A*.pt
+checkpoints/worm_brain_B*.pt
+checkpoints/worm_brain_campaign.pt
+checkpoints/replay_*.html
+generated_maps/coevolution_run/
+
+# Legacy large experiment logs & intermediate checkpoints (kept locally only)
+worm_mimic_60m/
+worm_ppo_run/
+worm_ppo_extension/
+worm_recovery_pilot/
+worm_run/
+worm_stage_runs/
+worm_ppo_replay.html
+worm_ppo_extension_replay.html
+worm_training_replay.html
+
+# Keep production checkpoints & verified map packs tracked
+!checkpoints/worm_brain_best.pt
+!checkpoints/pcgrl_designer.pt
+!generated_maps/archive.json
+!generated_maps/escalating_pack.json

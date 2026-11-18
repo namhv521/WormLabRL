@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WormLabRL · Phát lại huấn luyện</title>
+<style>
+:root{color-scheme:light;--ink:#172c24;--mute:#52645a;--line:#d4ded5;--bg:#f2f5ef;--panel:#fff;--green:#195f47;--soft:#e1efe7;--bad:#9a302b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Source Sans 3","Segoe UI",sans-serif;font-size:15px}
+main{max-width:1320px;margin:auto;padding:32px clamp(16px,4vw,54px) 60px}
+header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:24px}
+h1,h2,p{margin:0}h1{font-size:clamp(28px,4vw,46px);letter-spacing:-.035em}h2{font-size:18px;letter-spacing:-.018em}
+header p,.description{color:var(--mute);margin-top:6px;line-height:1.5}.description{font-size:13px}
+.toolbar,.transport{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600}
+select,button,input{font:inherit}button,select{min-height:42px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:0 11px}
+button{cursor:pointer;font-weight:600}button:disabled{opacity:.42;cursor:default}button:hover:not(:disabled){border-color:var(--green)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+#play{background:var(--green);color:white;border-color:var(--green);min-width:96px}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(245px,295px);gap:18px;align-items:start;margin-top:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+.stage{padding:14px}.stage h2{margin:3px 2px 10px}
+canvas{display:block;max-width:100%;width:100%;height:auto;aspect-ratio:22/12;background:#f5f8f0;border:1px solid var(--line);border-radius:8px}
+.transport{align-items:center;margin-top:12px}
+.seek{display:flex;flex:1 1 160px;flex-direction:row;align-items:center;gap:8px;color:var(--mute);font-size:13px;font-variant-numeric:tabular-nums}
+.seek input{flex:1;min-width:70px;accent-color:var(--green)}
+.toggle{display:flex;flex-direction:row;align-items:center;min-height:38px;margin:3px 0 0;cursor:pointer}.toggle input{accent-color:var(--green);width:17px;height:17px}
+.detail{padding:15px}.detail h2{margin-bottom:10px}
+.status{margin-top:10px;padding:10px 12px;background:var(--soft);border-radius:8px;line-height:1.45}.status.bad{background:#fce9e7;color:var(--bad)}
+#position{color:var(--mute);font-size:13px;margin:8px 0;min-height:20px;font-variant-numeric:tabular-nums}
+.attempts{display:grid;gap:6px;max-height:320px;overflow:auto}
+.attempts button{text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;padding:8px 10px}
+.attempts button[aria-current=true]{background:var(--soft);border-color:#7d9f8f}
+.attempts small{color:var(--mute);white-space:nowrap}
+.timeline{margin-top:18px;padding:15px;overflow:auto}.timeline h2{margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+td,th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}tbody tr:last-child td{border:0}th{color:var(--mute);font-weight:600}
+@media(max-width:800px){main{padding-top:20px}.workspace{grid-template-columns:1fr}.attempts{max-height:220px}header{align-items:start;flex-direction:column}.stage{padding:9px}.transport{gap:7px}td,th{padding:8px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div><h1>Phát lại huấn luyện</h1><p id="dataset">WormLabRL</p></div>
+</header>
+<div class="toolbar">
+<label>Nhóm map<select id="split">
+<option value="train">Huấn luyện</option><option value="test">Kiểm tra giữ lại</option>
+<option value="unverified">Lệch giả lập</option><option value="duplicate">Trùng hình học</option>
+</select></label>
+<label>Map<select id="map"></select></label>
+<button id="previousMap" type="button">Map trước</button><button id="nextMap" type="button">Map sau</button>
+</div>
+<div class="workspace">
+<section class="panel stage">
+<h2 id="mapTitle">Bản đồ</h2>
+<canvas id="mapCanvas" width="1100" height="600" aria-label="Trạng thái bản đồ và vị trí sâu"></canvas>
+<div class="status" id="status" role="status"></div>
+<p id="position"></p>
+<div class="transport">
+<button id="play" type="button">Phát</button>
+<button id="previousStep" type="button">Lùi 1 bước</button>
+<button id="nextStep" type="button">Tiến 1 bước</button>
+<label class="seek"><span id="stepText">0 / 0</span><input id="seek" type="range" min="0" max="0" value="0" aria-label="Vị trí trong lượt"></label>
+<label>Tốc độ<select id="speed"><option value="900">Chậm</option><option value="430" selected>Vừa</option><option value="160">Nhanh</option></select></label>
+</div>
+<label class="toggle"><input type="checkbox" id="continuous" checked> Tự chuyển lượt và map</label>
+</section>
+<aside class="panel detail">
+<h2>Nhật ký lượt chơi</h2>
+<div class="attempts" id="attempts"></div>
+</aside>
+</div>
+<section class="panel timeline">
+<h2>Tiến độ trên tập kiểm tra giữ lại</h2>
+<p class="description" id="summary"></p>
+<table aria-label="Tiến độ huấn luyện">
+<thead><tr id="timelineColumns"><th>Mốc huấn luyện</th><th>Tự thắng</th><th>Khớp nước mẫu</th><th>Thắng khi có tìm kiếm</th></tr></thead>
+<tbody id="timeline"></tbody>
+</table>
+</section>
+</main>
+<script id="runData" type="application/json">__RUN_DATA__</script>
+<script>
+const showGrid = true;
+__BOARD_RENDERER__
+
+const {info, maps} = JSON.parse(document.querySelector('#runData').textContent);
+const byId = id => document.getElementById(id);
+const actions = {1:'Trái',2:'Phải',3:'Lên',4:'Xuống'};
+const directions = {1:[-1,0],2:[1,0],3:[0,1],4:[0,-1]};
+const events = {ok:'Di chuyển', win:'Đã vào cổng', wall:'Vướng tường', body:'Vướng thân sâu',
+stone:'Đá chặn đường', trap:'Chạm bẫy', fall:'Rơi khỏi map', crushed:'Bị đá đè',
+loop:'Lặp lại trạng thái', limit:'Hết ngân sách bước', stuck:'Không còn hướng hợp lệ'};
+const modeNames = {policy:'Mô hình tự thử', search:'Mô hình + tìm kiếm', expert:'Lời giải mẫu',
+before:'Mô hình trước train', after:'Mô hình sau train',
+ppo_baseline:'Baseline trước PPO', ppo_masked_last:'Vòng cuối · Có lọc hướng',
+mimic_baseline:'PPO vòng 4', mimic_warm:'Mô hình sau warm start',
+mimic_selected:'Mô hình đã chọn', mimic_unmasked:'Mô hình đã chọn · Tất cả hướng',
+mimic_control:'Đối chứng · Chỉ học lời giải mẫu',
+stage_start:'Trước train PPO', stage_greedy:'Checkpoint của màn · Greedy'};
+const modeLabel = mode => modeNames[mode] ??
+  (mode.startsWith('mimic_round_') ? 'Lượt thu thập · Vòng ' :
+   mode.startsWith('ppo_eval_') ? 'Kiểm tra vòng ' : 'Lượt train PPO · Vòng ') + mode.split('_').at(-1);
+const ppo = Array.isArray(info.rounds);
+if (info.recovery_pilot) {
+  modeNames.before = 'PPO vòng 4';
+  modeNames.after = 'Policy sau fine-tune';
+  modeNames.search = 'Đường phục hồi đã xác minh';
+}
+let mapIndex = 0, attemptIndex = 0, step = 0, timer = null, active = false;
+const filtered = () => maps.filter(map => map.split === byId('split').value);
+const current = () => filtered()[mapIndex];
+
+function selectMap(index) {
+  mapIndex = index;
+  attemptIndex = 0;
+  step = 0;
+  byId('map').selectedIndex = index;
+  renderAttempts();
+  render();
+}
+
+function selectGroup() {
+  pause();
+  byId('map').replaceChildren(...filtered().map(map => new Option(map.name, map.name)));
+  selectMap(0);
+}
+
+function renderAttempts() {
+  const map = current();
+  const list = byId('attempts');
+  list.replaceChildren();
+  (map?.attempts ?? []).forEach((attempt, index) => {
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.setAttribute('aria-current', index === attemptIndex ? 'true' : 'false');
+    const title = document.createElement('span');
+    title.textContent = (index + 1) + '. ' + modeLabel(attempt.mode);
+    const result = document.createElement('small');
+    result.textContent = attempt.outcome === 'win' ? 'Thắng · ' + attempt.steps : events[attempt.outcome];
+    node.append(title, result);
+    node.onclick = () => { pause(); attemptIndex = index; step = 0; renderAttempts(); render(); };
+    list.append(node);
+  });
+}
+
+function drawBlockedMove(map, attempt, state) {
+  const context = byId('mapCanvas').getContext('2d');
+  const size = context.canvas.width / map.width;
+  const [x,y] = attempt.frames[step - 1].body[0];
+  const [dx,dy] = directions[state.action];
+  const startX = (x + 0.5 + 0.42 * dx) * size;
+  const startY = (map.height - y - 0.5 - 0.42 * dy) * size;
+  const endX = startX + 0.52 * size * dx;
+  const endY = startY - 0.52 * size * dy;
+  context.save();
+  context.strokeStyle = '#ba342a';
+  context.lineWidth = 5;
+  context.lineCap = 'round';
+  context.beginPath();
+  context.moveTo(startX, startY);
+  context.lineTo(endX, endY);
+  for (const side of [-1, 1]) {
+    context.moveTo(endX, endY);
+    context.lineTo(endX + size * (-0.22 * dx + side * 0.15 * dy),
+      endY + size * (0.22 * dy + side * 0.15 * dx));
+  }
+  context.stroke();
+  context.restore();
+}
+
+function render() {
+  const map = current();
+  const attempt = map?.attempts?.[attemptIndex];
+  const state = attempt ? attempt.frames[step] : map?.initial;
+  if (!map || !state) {
+    byId('mapTitle').textContent = 'Nhóm này chưa có map';
+    byId('status').textContent = 'Chọn nhóm khác để xem.';
+    byId('play').disabled = byId('seek').disabled = true;
+    byId('previousStep').disabled = byId('nextStep').disabled = true;
+    byId('previousMap').disabled = byId('nextMap').disabled = true;
+    byId('stepText').textContent = '0 / 0';
+    byId('position').textContent = '';
+    byId('mapCanvas').getContext('2d').clearRect(0, 0, 1100, 600);
+    return;
+  }
+  const tiles = (points, id) => points.map(([x,y]) => ({x,y,id}));
+  drawBoard({width:map.width, height:map.height, bricks:[
+    ...map.bricks, ...tiles(state.apples,4), ...tiles(state.stones,2),
+    ...tiles(state.body.slice(1),6), ...tiles(state.body.slice(0,1),5)
+  ]});
+  if (attempt && step && ['wall','body','stone'].includes(state.event)) {
+    drawBlockedMove(map, attempt, state);
+  }
+  byId('mapTitle').textContent = 'Map ' + map.name + ' · ' + map.hint_steps + ' bước trong lời giải gốc';
+  byId('previousMap').disabled = mapIndex === 0;
+  byId('nextMap').disabled = mapIndex >= filtered().length - 1;
+  byId('previousStep').disabled = !attempt || step === 0;
+  byId('nextStep').disabled = !attempt || step >= attempt.steps;
+  byId('play').disabled = !attempt;
+  byId('seek').disabled = !attempt;
+  byId('seek').max = attempt?.steps ?? 0;
+  byId('seek').value = step;
+  byId('stepText').textContent = step + ' / ' + (attempt?.steps ?? 0);
+  const banner = byId('status');
+  banner.classList.toggle('bad', Boolean(state.event && !['ok','win'].includes(state.event)));
+  if (attempt && step === 0) {
+    banner.textContent = 'Vị trí xuất phát · ' + modeLabel(attempt.mode) +
+      (attempt.expanded ? ' · Đã xét ' + attempt.expanded + ' trạng thái' : '');
+  } else if (attempt) {
+    banner.textContent = actions[state.action] + ' · ' + events[state.event] + ' · Thưởng ' +
+      (state.reward >= 0 ? '+' : '') + state.reward;
+  } else if (map.split === 'validation') {
+    banner.textContent = 'Map dùng để chọn checkpoint. Các điểm đo nằm trong báo cáo.';
+  } else if (map.split === 'train') {
+    banner.textContent = 'Map thuộc tập train. Lượt này nằm trong nhật ký episode.';
+  } else if (map.split === 'duplicate') {
+    banner.textContent = 'Trùng hình học với map ' + map.alias + '. Xem lượt chơi ở map đó.';
+  } else {
+    banner.textContent = 'Lời giải lệch giả lập sau ' + map.verified_steps + ' bước khớp. Map không tham gia train.';
+  }
+  byId('position').textContent = 'Đầu sâu (' + state.body[0].join(', ') + ') · ' +
+    state.body.length + ' đốt · ' + state.apples.length + ' táo còn lại';
+}
+
+function pause() {
+  active = false;
+  clearTimeout(timer);
+  byId('play').textContent = 'Phát';
+}
+
+function advance() {
+  const attempt = current()?.attempts?.[attemptIndex];
+  if (!attempt) return pause();
+  let delay = Number(byId('speed').value);
+  if (step < attempt.steps) {
+    step += 1;
+    render();
+    if (step === attempt.steps) delay = Math.max(850, delay);
+  } else if (!byId('continuous').checked) {
+    return pause();
+  } else if (attemptIndex + 1 < current().attempts.length) {
+    attemptIndex += 1;
+    step = 0;
+    renderAttempts();
+    render();
+  } else if (mapIndex + 1 < filtered().length) {
+    selectMap(mapIndex + 1);
+  } else {
+    return pause();
+  }
+  if (active) timer = setTimeout(advance, delay);
+}
+
+byId('split').onchange = selectGroup;
+byId('map').onchange = event => { pause(); selectMap(event.target.selectedIndex); };
+byId('previousMap').onclick = () => { pause(); selectMap(mapIndex - 1); };
+byId('nextMap').onclick = () => { pause(); selectMap(mapIndex + 1); };
+byId('previousStep').onclick = () => { pause(); step -= 1; render(); };
+byId('nextStep').onclick = () => { pause(); step += 1; render(); };
+byId('seek').oninput = event => { pause(); step = Number(event.target.value); render(); };
+byId('play').onclick = () => {
+  if (active) return pause();
+  if (!current()?.attempts?.length) return;
+  if (step === current().attempts[attemptIndex].steps && !byId('continuous').checked) {
+    step = 0;
+    render();
+  }
+  active = true;
+  byId('play').textContent = 'Tạm dừng';
+  timer = setTimeout(advance, Number(byId('speed').value));
+};
+
+const {train, test, duplicate, unverified} = info.splits;
+const format = new Intl.NumberFormat('vi-VN');
+byId('dataset').textContent = train + ' map train · ' + test + ' map kiểm tra · ' +
+  duplicate + ' map trùng · ' + unverified + ' map lệch giả lập';
+const counts = info.resolved_by;
+if (info.mimic) {
+  const run = info.mimic;
+  byId('split').add(new Option('Chọn checkpoint', 'validation'), 2);
+  byId('summary').textContent = format.format(Math.floor(run.elapsed_seconds / 60)) +
+    ' phút train · Checkpoint được chọn: ' + run.selected + '.';
+  const titles = ['Mốc huấn luyện', 'Cập nhật tham số', 'Tự thắng validation', 'Đối chứng validation', 'Nhãn sửa sai mới'];
+  byId('timelineColumns').replaceChildren(...titles.map(title => {
+    const cell = document.createElement('th');
+    cell.textContent = title;
+    return cell;
+  }));
+  const ratio = row => row.wins + '/' + row.maps;
+  const cells = [
+    ['PPO vòng 4', '—', ratio(run.baseline_validation), '—', '—'],
+    ...run.warmup.map(row => ['Warm start ' + row.epoch, row.updates, ratio(row.validation), '—', '—']),
+    ...run.rounds.map(row => ['Sửa sai vòng ' + row.round, row.updates, ratio(row.validation),
+      ratio(row.control_validation), row.repairs]),
+  ];
+  for (const values of cells) {
+    const row = byId('timeline').insertRow();
+    for (const value of values) row.insertCell().textContent = value;
+  }
+} else if (ppo) {
+  const option = new Option('Chọn checkpoint', 'validation');
+  byId('split').add(option, 2);
+  const total = info.rounds.at(-1).total_steps;
+  const episodes = info.rounds.reduce((sum, round) => sum +
+    (round.completed.root_episodes ?? 0) + (round.completed.hint_start_episodes ?? 0), 0);
+  const choice = info.selected_round === 0 ? 'baseline' : 'vòng ' + info.selected_round;
+  byId('summary').textContent = format.format(total) + ' bước PPO tích lũy · ' +
+    format.format(episodes) + ' episode hoàn tất trong đợt này · Checkpoint được chọn: ' + choice + '.';
+  const titles = ['Mốc huấn luyện', 'Bước PPO', 'Tự thắng', 'Tự thắng có lọc hướng', 'Khớp nước mẫu'];
+  byId('timelineColumns').replaceChildren(...titles.map(title => {
+    const cell = document.createElement('th');
+    cell.textContent = title;
+    return cell;
+  }));
+} else if (info.stage_ppo) {
+  document.querySelector('.timeline').hidden = true;
+  byId('dataset').textContent = 'PPO chuyên từng màn · Lượt tự chơi và kiểm tra greedy';
+} else if (info.recovery_pilot) {
+  byId('summary').textContent = format.format(info.recovery_paths) +
+    ' đường phục hồi thu được qua các seed. Mỗi lượt kiểm tra bắt đầu từ đầu map.';
+} else {
+  byId('summary').textContent = 'Trong curriculum: ' + (counts.policy ?? 0) +
+    ' map mô hình tự thắng, ' + (counts.search ?? 0) + ' map thắng với tìm kiếm, ' +
+    (counts.expert ?? 0) + ' map dùng lời giải mẫu.';
+}
+for (const [index, row] of (info.timeline ?? []).entries()) {
+  const tr = document.createElement('tr');
+  const accuracy = (row.hint_accuracy * 100).toFixed(1) + '%';
+  const wins = row.wins + '/' + row.maps;
+  const label = row.label === 'before' ? 'Trước train' :
+    row.label === 'after' ? 'Sau train' : 'Sau ' + row.label + ' map';
+  const startRound = info.start_round ?? 0;
+  const roundLabel = index || startRound ? 'Vòng ' + (startRound + index) : 'Trước PPO';
+  const cells = ppo
+    ? [roundLabel, format.format(info.rounds[index - 1]?.total_steps ?? info.prior_steps ?? 0),
+       wins, row.masked_wins + '/' + row.maps, accuracy]
+    : [label, wins, accuracy, row.wins_with_search == null ? '—' : row.wins_with_search + '/' + row.maps];
+  for (const value of cells) tr.insertCell().textContent = value;
+  byId('timeline').append(tr);
+}
+selectGroup();
+</script>
+</body>
+</html>

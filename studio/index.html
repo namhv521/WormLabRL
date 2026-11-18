@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WormLabRL Studio — Continual RL Solver & Progressive PCGRL Map Designer</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --panel: #131c31;
+    --panel-alt: #1b2742;
+    --border: #2a3958;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --amber: #f59e0b;
+    --purple: #a855f7;
+    --red: #ef4444;
+    --cyan: #06b6d4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: grid;
+    grid-template-columns: 280px 1fr 340px;
+    height: 100vh;
+    overflow: hidden;
+  }
+  /* Left Sidebar */
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 17px;
+    font-weight: 800;
+    color: #4ade80;
+    letter-spacing: -0.3px;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    background: rgba(34, 197, 94, 0.16);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+  }
+  .brain-card {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .brain-row { display: flex; justify-content: space-between; align-items: center; }
+  .brain-row span:first-child { color: var(--muted); }
+  .brain-row strong { color: #f8fafc; font-variant-numeric: tabular-nums; }
+  .tier-meter {
+    height: 7px;
+    background: #0b1120;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 3px;
+    border: 1px solid var(--border);
+  }
+  .tier-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444, #a855f7);
+    width: 20%;
+    transition: width 0.35s ease;
+  }
+  .pack-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5px;
+  }
+  .tab-btn {
+    padding: 7px 4px;
+    background: #0b1120;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 7px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+  .tab-btn.active {
+    background: var(--green);
+    color: #052e16;
+    border-color: var(--green);
+  }
+  .search-input {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: #0b1120;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .level-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    align-content: start;
+    padding-right: 3px;
+  }
+  .level-grid.gen-list {
+    grid-template-columns: 1fr;
+  }
+  .lvl-btn {
+    padding: 7px 4px;
+    background: #0b1120;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    text-align: center;
+  }
+  .lvl-btn.gen-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    text-align: left;
+  }
+  .lvl-btn:hover { border-color: #4ade80; }
+  .lvl-btn.active { background: #22c55e; color: #052e16; border-color: #22c55e; font-weight: 800; }
+
+  /* Center Main Workspace */
+  .main {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 12px;
+    gap: 6px;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .topbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--panel);
+    padding: 7px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .title-block h1 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .title-block p { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    background: var(--panel);
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .btn {
+    padding: 5px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: #0f172a;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .btn:hover:not(:disabled) { filter: brightness(1.15); border-color: #64748b; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.green { background: #16a34a; border-color: #22c55e; color: #fff; }
+  .btn.blue { background: #2563eb; border-color: #3b82f6; color: #fff; }
+  .btn.amber { background: #d97706; border-color: #f59e0b; color: #fff; }
+  .btn.purple { background: #7c3aed; border-color: #a855f7; color: #fff; }
+  .btn.red { background: #dc2626; border-color: #ef4444; color: #fff; }
+  .btn.active-toggle { outline: 2px solid #fbbf24; background: #b45309; }
+
+  .editor-bar {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    background: #1e1b4b;
+    border: 1px solid #6366f1;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+  .editor-bar.visible { display: flex; }
+  .brush-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #4338ca;
+    background: #0f172a;
+    color: #e2e8f0;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  .brush-btn.selected { background: #4f46e5; border-color: #818cf8; color: #fff; }
+
+  .canvas-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #bae6fd 0%, #e0f2fe 62%, #bbf7d0 100%);
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    padding: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  canvas#boardCanvas {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    cursor: crosshair;
+  }
+  .status-banner {
+    position: absolute;
+    top: 14px;
+    left: 16px;
+    background: rgba(15, 23, 42, 0.86);
+    backdrop-filter: blur(6px);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #f8fafc;
+    pointer-events: none;
+  }
+  .playback-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .playback-bar input[type="range"] { flex: 1; accent-color: var(--green); }
+  select.select-sm {
+    background: #0b1120;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Right Inspector Panel */
+  .inspector {
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+  }
+  .card {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card-title {
+    font-size: 12.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #93c5fd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .prob-grid { display: flex; flex-direction: column; gap: 6px; }
+  .prob-row {
+    display: grid;
+    grid-template-columns: 62px 1fr 44px;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .prob-track {
+    height: 9px;
+    background: #0b1120;
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .prob-fill {
+    height: 100%;
+    background: var(--blue);
+    width: 25%;
+    transition: width 0.12s ease;
+  }
+  .oracle-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .metric-box {
+    background: #0b1120;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 6px 8px;
+  }
+  .metric-box .label { color: var(--muted); font-size: 11px; }
+  .metric-box .val { font-size: 14px; font-weight: 800; margin-top: 1px; }
+  .log-console {
+    flex: 1;
+    min-height: 170px;
+    max-height: 280px;
+    background: #070b14;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: 'Cascadia Code', Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.45;
+    overflow-y: auto;
+    color: #cbd5e1;
+  }
+  .log-line { margin-bottom: 3px; }
+  .log-line.win { color: #4ade80; }
+  .log-line.warn { color: #fbbf24; }
+  .log-line.info { color: #38bdf8; }
+  .chart-svg {
+    width: 100%;
+    height: 76px;
+    background: #0b1120;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+  <!-- LEFT SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span>🐛 WormLabRL Studio</span>
+      <span class="badge" id="tierBadge">Tier 1</span>
+    </div>
+
+    <div class="brain-card">
+      <div class="brain-row"><span>Shared Brain:</span><strong id="stCkpt">Loading...</strong></div>
+      <div class="brain-row"><span>Màn đã thuộc lòng:</span><strong id="stMastered">0 màn</strong></div>
+      <div class="brain-row"><span>Replay Memory:</span><strong id="stReplay">0 mẫu</strong></div>
+      <div class="brain-row"><span>Cập nhật PPO/Grad:</span><strong id="stUpdates">0</strong></div>
+      <div class="brain-row"><span>Ngưỡng độ khó kế:</span><strong id="stFloor">14.0 / 100</strong></div>
+      <div class="tier-meter"><div class="tier-fill" id="stFloorBar"></div></div>
+    </div>
+
+    <div class="pack-tabs">
+      <button id="tabA" class="tab-btn active" onclick="switchPack('A')">Pack A (210)</button>
+      <button id="tabB" class="tab-btn" onclick="switchPack('B')">Pack B (30)</button>
+      <button id="tabG" class="tab-btn" onclick="switchPack('G')">🧬 AI (<span id="genCount">0</span>)</button>
+    </div>
+
+    <input id="searchBox" class="search-input" type="text" placeholder="Tìm màn (vd: 4, 15, 67)..." oninput="renderSidebar()">
+    <div id="levelGrid" class="level-grid"></div>
+  </aside>
+
+  <!-- CENTER WORKSPACE -->
+  <main class="main">
+    <div class="topbar">
+      <div class="title-block">
+        <h1 id="mapTitle">Màn A1</h1>
+        <p id="mapSubtitle">22×12 · Bấm Phím Mũi Tên / WASD để tự chơi hoặc chọn chế độ AI bên dưới</p>
+      </div>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="btn" onclick="prevLevel()">⬅️</button>
+        <button class="btn" onclick="nextLevel()">➡️</button>
+        <button class="btn" id="btnGrid" onclick="toggleGrid()"># Lưới: BẬT</button>
+        <button class="btn" id="btnHints" onclick="toggleHints()">💡 Lời giải</button>
+        <button class="btn purple" id="btnEditor" onclick="toggleEditor()">🛠️ Vẽ Map</button>
+      </div>
+    </div>
+
+    <!-- Core Product Controls -->
+    <div class="action-bar">
+      <button class="btn" onclick="resetPlay()">🔄 Chơi lại (R)</button>
+      <button class="btn blue" id="btnZeroShot" onclick="runZeroShot()">🤖 AI Tự Chơi (Zero-Shot)</button>
+      <button class="btn amber" id="btnSelfTrain" onclick="runSelfTrainStage()">🔥 AI Tự Chơi & Tự Train Màn Này</button>
+      <span style="width:1px; height:22px; background:var(--border); margin:0 2px;"></span>
+      <select id="genTierSelect" class="select-sm" title="Chọn độ khó sinh Map">
+        <option value="0">📈 Tăng dần tự động</option>
+        <option value="1">Tier 1 — Easy</option>
+        <option value="2">Tier 2 — Medium</option>
+        <option value="3">Tier 3 — Hard</option>
+        <option value="4">Tier 4 — Extreme</option>
+        <option value="5">Tier 5 — Grandmaster</option>
+      </select>
+      <button class="btn green" id="btnGenMap" onclick="generateNewMap()">✨ Sinh Map Giải Được</button>
+      <button class="btn purple" id="btnCoevolve" onclick="toggleAutoCoevolve()">🚀 Auto Dojo (Sinh Map Khó Dần + Tự Học)</button>
+    </div>
+
+    <!-- Map Editor Toolbar -->
+    <div class="editor-bar" id="editorBar">
+      <strong>🛠️ Bút vẽ:</strong>
+      <button class="brush-btn selected" data-brush="1" onclick="selectBrush(1)">🟫 Đất/Cỏ</button>
+      <button class="brush-btn" data-brush="2" onclick="selectBrush(2)">🪨 Đá rơi</button>
+      <button class="brush-btn" data-brush="4" onclick="selectBrush(4)">🍎 Táo</button>
+      <button class="brush-btn" data-brush="3" onclick="selectBrush(3)">⚠️ Gai/Cưa</button>
+      <button class="brush-btn" data-brush="8" onclick="selectBrush(8)">🌀 Cổng Đích</button>
+      <button class="brush-btn" data-brush="5" onclick="selectBrush(5)">🐛 Đặt Sâu (3 đốt)</button>
+      <button class="brush-btn" data-brush="0" onclick="selectBrush(0)">🧹 Xóa ô</button>
+      <button class="btn" onclick="clearEditorCanvas()">📄 Khung trống</button>
+      <button class="btn green" onclick="verifyCurrentMap()">✅ Oracle Kiểm Chứng & Tạo Hints</button>
+    </div>
+
+    <div class="canvas-container">
+      <div class="status-banner" id="statusBanner">Sẵn sàng · Dùng phím mũi tên / WASD hoặc bấm nút AI</div>
+      <canvas id="boardCanvas" width="1100" height="600"></canvas>
+    </div>
+
+    <div class="playback-bar">
+      <button class="btn" id="btnPlayPause" onclick="togglePlayback()">⏯️ Phát</button>
+      <span id="frameLabel" style="min-width:95px; font-variant-numeric:tabular-nums;">Bước: 0 / 0</span>
+      <input type="range" id="frameSlider" min="0" max="0" value="0" oninput="scrubFrame(this.value)">
+      <label style="color:var(--muted);">Tốc độ:</label>
+      <select id="speedSelect" class="select-sm">
+        <option value="180">1x</option>
+        <option value="95" selected>2x</option>
+        <option value="45">4x</option>
+      </select>
+      <select id="attemptSelect" class="select-sm" onchange="switchAttemptView(this.value)" style="display:none;"></select>
+    </div>
+  </main>
+
+  <!-- RIGHT INSPECTOR -->
+  <aside class="inspector">
+    <div class="card">
+      <div class="card-title">
+        <span>🧠 Neural Policy HUD</span>
+        <span id="criticVal" style="color:#4ade80; font-size:12px;">V(s) = —</span>
+      </div>
+      <div class="prob-grid">
+        <div class="prob-row"><span>⬅️ Trái</span><div class="prob-track"><div class="prob-fill" id="pb0"></div></div><strong id="pt0">25%</strong></div>
+        <div class="prob-row"><span>➡️ Phải</span><div class="prob-track"><div class="prob-fill" id="pb1"></div></div><strong id="pt1">25%</strong></div>
+        <div class="prob-row"><span>⬆️ Lên</span><div class="prob-track"><div class="prob-fill" id="pb2"></div></div><strong id="pt2">25%</strong></div>
+        <div class="prob-row"><span>⬇️ Xuống</span><div class="prob-track"><div class="prob-fill" id="pb3"></div></div><strong id="pt3">25%</strong></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>⚖️ Oracle Kiểm Định Map</span>
+        <button class="btn" style="padding:3px 8px; font-size:11px;" onclick="verifyCurrentMap()">Đo ngay</button>
+      </div>
+      <div class="oracle-grid">
+        <div class="metric-box"><div class="label">Trạng thái</div><div class="val" id="orSolvable">—</div></div>
+        <div class="metric-box"><div class="label">Độ khó (0-100)</div><div class="val" id="orScore">—</div></div>
+        <div class="metric-box"><div class="label">Lời giải tối ưu L*</div><div class="val" id="orSteps">—</div></div>
+        <div class="metric-box"><div class="label">Táo / Đá bắt buộc</div><div class="val" id="orMand">—</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>📈 Tiến trình Tăng Độ Khó</span>
+        <span id="coevCount" style="color:var(--muted); font-size:11px;">0 vòng</span>
+      </div>
+      <svg class="chart-svg" id="diffChart" viewBox="0 0 300 76"></svg>
+    </div>
+
+    <div class="card" style="flex:1;">
+      <div class="card-title">
+        <span>📡 Nhật ký Tự Chơi & Tự Train</span>
+        <button class="btn" style="padding:2px 7px; font-size:10.5px;" onclick="clearLogs()">Xóa</button>
+      </div>
+      <div class="log-console" id="logConsole"></div>
+    </div>
+  </aside>
+
+<script>
+let PACKS = { A: [], B: [], G: [] };
+let curPack = 'A';
+let curIdx = 0;
+let currentLevel = null;
+let liveState = null;       // { body: [[x,y],...], apples: [[x,y],...], stones: [[x,y],...] }
+let undoStack = [];
+let showGrid = true;
+let showHints = false;
+let editorMode = false;
+let selectedBrush = 1;
+let isDraggingPaint = false;
+
+let playbackFrames = [];
+let playbackIdx = 0;
+let playbackTimer = null;
+let savedAttempts = [];
+let autoCoevolve = false;
+let busy = false;
+let inReplayMode = false;
+let gameOverLock = false;
+let diffHistory = [];
+
+function logMsg(text, cls = '') {
+  const box = document.getElementById('logConsole');
+  const div = document.createElement('div');
+  div.className = 'log-line ' + cls;
+  const ts = new Date().toLocaleTimeString('vi-VN', { hour12: false });
+  div.textContent = `[${ts}] ${text}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function clearLogs() { document.getElementById('logConsole').innerHTML = ''; }
+
+function setStatus(msg) {
+  document.getElementById('statusBanner').textContent = msg;
+}
+
+function updateBrainStatusUI(st) {
+  if (!st) return;
+  document.getElementById('stCkpt').textContent = st.checkpoint || 'worm_brain';
+  document.getElementById('stMastered').textContent = `${st.mastered_stages} màn`;
+  document.getElementById('stReplay').textContent = `${st.replay_size.toLocaleString()} mẫu`;
+  document.getElementById('stUpdates').textContent = st.total_updates.toLocaleString();
+  document.getElementById('stFloor').textContent = `${st.difficulty_floor} / 100`;
+  document.getElementById('stFloorBar').style.width = `${Math.min(100, st.difficulty_floor)}%`;
+  document.getElementById('tierBadge').textContent = `Tier ${st.curriculum_tier}`;
+  if (st.coevolution_history && st.coevolution_history.length > 0) {
+    diffHistory = st.coevolution_history.map(r => r.difficulty_score);
+    drawDifficultyChart();
+  }
+}
+
+function drawDifficultyChart() {
+  const svg = document.getElementById('diffChart');
+  document.getElementById('coevCount').textContent = `${diffHistory.length} màn sinh`;
+  if (diffHistory.length === 0) {
+    svg.innerHTML = `<text x="150" y="42" text-anchor="middle" fill="#64748b" font-size="11">Bấm Sinh Map hoặc Auto Dojo để xem đồ thị</text>`;
+    return;
+  }
+  const pts = diffHistory.slice(-20);
+  const w = 300, h = 76, pad = 10;
+  const coords = pts.map((v, i) => {
+    const x = pts.length === 1 ? w / 2 : pad + (i / (pts.length - 1)) * (w - 2 * pad);
+    const y = h - pad - (Math.min(100, Math.max(0, v)) / 100) * (h - 2 * pad);
+    return [x, y, v];
+  });
+  const pathD = coords.map((c, i) => (i === 0 ? `M ${c[0]} ${c[1]}` : `L ${c[0]} ${c[1]}`)).join(' ');
+  const dots = coords.map(c => `<circle cx="${c[0]}" cy="${c[1]}" r="3" fill="#4ade80"/>`).join('');
+  svg.innerHTML = `
+    <line x1="10" y1="66" x2="290" y2="66" stroke="#1e293b" stroke-width="1"/>
+    <line x1="10" y1="38" x2="290" y2="38" stroke="#1e293b" stroke-dasharray="3,3" stroke-width="1"/>
+    <path d="${pathD}" fill="none" stroke="#22c55e" stroke-width="2.2"/>
+    ${dots}
+  `;
+}
+
+async function initApp() {
+  const res = await fetch('/api/levels');
+  const data = await res.json();
+  PACKS.A = data.levelsA || [];
+  PACKS.B = data.levelsB || [];
+  PACKS.G = data.levelsG || [];
+  document.getElementById('genCount').textContent = PACKS.G.length;
+  updateBrainStatusUI(data.status);
+  drawDifficultyChart();
+  renderSidebar();
+  await selectLevel(0);
+  logMsg('WormLabRL Studio sẵn sàng! Chọn màn để chơi, cho AI tự học hoặc bật Auto Dojo.', 'info');
+}
+
+function switchPack(p) {
+  curPack = p;
+  curIdx = 0;
+  document.getElementById('tabA').classList.toggle('active', p === 'A');
+  document.getElementById('tabB').classList.toggle('active', p === 'B');
+  document.getElementById('tabG').classList.toggle('active', p === 'G');
+  renderSidebar();
+  if (PACKS[p].length > 0) selectLevel(0);
+}
+
+function renderSidebar() {
+  const grid = document.getElementById('levelGrid');
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const list = PACKS[curPack] || [];
+  grid.classList.toggle('gen-list', curPack === 'G');
+  grid.innerHTML = '';
+  list.forEach((lv, idx) => {
+    const label = lv.name || `${curPack}${lv.id}`;
+    if (q && !String(lv.id).includes(q) && !label.toLowerCase().includes(q)) return;
+    const btn = document.createElement('button');
+    btn.className = 'lvl-btn' + (curPack === 'G' ? ' gen-item' : '') + (idx === curIdx ? ' active' : '');
+    if (curPack === 'G') {
+      const sc = lv.oracle ? lv.oracle.difficulty_score : (lv.difficulty_score || '—');
+      const tName = lv.oracle ? lv.oracle.tier_name : `T${lv.tier || 1}`;
+      btn.innerHTML = `<span>${label}</span><span style="font-size:11px; color:#fbbf24;">${tName} · ${sc}đ</span>`;
+    } else {
+      btn.textContent = lv.id;
+    }
+    btn.onclick = () => selectLevel(idx);
+    grid.appendChild(btn);
+  });
+}
+
+async function selectLevel(idx) {
+  stopPlayback();
+  const list = PACKS[curPack] || [];
+  if (!list[idx]) return;
+  curIdx = idx;
+  currentLevel = JSON.parse(JSON.stringify(list[idx]));
+  savedAttempts = [];
+  document.getElementById('attemptSelect').style.display = 'none';
+  renderSidebar();
+  await initLevelState();
+  if (currentLevel.oracle) {
+    renderOracleCard(currentLevel.oracle);
+  } else {
+    document.getElementById('orSolvable').textContent = 'Chưa đo';
+    document.getElementById('orScore').textContent = '—';
+    document.getElementById('orSteps').textContent = currentLevel.hints ? `${currentLevel.hints.length} (hint)` : '—';
+    document.getElementById('orMand').textContent = '—';
+  }
+}
+
+async function initLevelState() {
+  if (!currentLevel) return;
+  const label = currentLevel.name || `${curPack}${currentLevel.id}`;
+  document.getElementById('mapTitle').textContent = `Màn ${label}`;
+  const nApples = currentLevel.bricks.filter(b => b.id === 4).length;
+  const nStones = currentLevel.bricks.filter(b => b.id === 2).length;
+  const nHaz = currentLevel.bricks.filter(b => [3,7,9,10,11].includes(b.id)).length;
+  document.getElementById('mapSubtitle').textContent =
+    `Lưới 22×12 · 🍎 Táo: ${nApples} · 🪨 Đá: ${nStones} · ⚠️ Bẫy: ${nHaz} · 💡 Hints: ${(currentLevel.hints || []).length}`;
+
+  try {
+    const res = await fetch('/api/init_level', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level: currentLevel, name: label })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      liveState = data.initial;
+      undoStack = [];
+      inReplayMode = false;
+      gameOverLock = false;
+      playbackFrames = [JSON.parse(JSON.stringify(liveState))];
+      updatePlaybackControls(0);
+      inReplayMode = false;
+      setStatus(`Đang ở ${label} · Bấm phím mũi tên / WASD hoặc cho AI chơi`);
+    } else {
+      liveState = extractRawState(currentLevel);
+      setStatus('Map đang chỉnh sửa (chưa hợp lệ frame 0)');
+    }
+  } catch (e) {
+    liveState = extractRawState(currentLevel);
+  }
+  drawCanvas();
+}
+
+function extractRawState(lv) {
+  const head = lv.bricks.find(b => b.id === 5);
+  const tails = lv.bricks.filter(b => b.id === 6).map(b => [b.x, b.y]);
+  const body = head ? [[head.x, head.y], ...tails] : [];
+  const apples = lv.bricks.filter(b => b.id === 4).map(b => [b.x, b.y]);
+  const stones = lv.bricks.filter(b => b.id === 2).map(b => [b.x, b.y]);
+  return { body, apples, stones };
+}
+
+function prevLevel() {
+  const list = PACKS[curPack] || [];
+  if (!list.length) return;
+  selectLevel((curIdx - 1 + list.length) % list.length);
+}
+function nextLevel() {
+  const list = PACKS[curPack] || [];
+  if (!list.length) return;
+  selectLevel((curIdx + 1) % list.length);
+}
+function toggleGrid() {
+  showGrid = !showGrid;
+  document.getElementById('btnGrid').textContent = '# Lưới: ' + (showGrid ? 'BẬT' : 'TẮT');
+  drawCanvas();
+}
+function toggleHints() {
+  showHints = !showHints;
+  document.getElementById('btnHints').classList.toggle('active-toggle', showHints);
+  drawCanvas();
+}
+
+/* Canvas Renderer inherited & upgraded from Hungry Worm Viewer */
+function drawThorn(ctx, px, py, s, rotDeg) {
+  ctx.save();
+  ctx.translate(px + s/2, py + s/2);
+  ctx.rotate((rotDeg * Math.PI) / 180);
+  ctx.fillStyle = '#ea580c';
+  ctx.strokeStyle = '#7c2d12';
+  ctx.lineWidth = 2;
+  for (let k = -1; k <= 1; k += 2) {
+    ctx.beginPath();
+    ctx.moveTo(k * s * 0.22 - s * 0.2, s * 0.45);
+    ctx.lineTo(k * s * 0.22, -s * 0.35);
+    ctx.lineTo(k * s * 0.22 + s * 0.2, s * 0.45);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawGear(ctx, px, py, s) {
+  // Render id=7 as a deadly Spiked Naval Bomb / Mine
+  const cx = px + s/2, cy = py + s/2, r = s * 0.34;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = '#1e293b';
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 8; i++) {
+    ctx.rotate(Math.PI / 4);
+    ctx.beginPath();
+    ctx.moveTo(-4, -r + 2);
+    ctx.lineTo(0, -r - 7);
+    ctx.lineTo(4, -r + 2);
+    ctx.closePath();
+    ctx.fillStyle = '#dc2626';
+    ctx.fill();
+    ctx.stroke();
+  }
+  const bombGrad = ctx.createRadialGradient(-4, -4, 2, 0, 0, r);
+  bombGrad.addColorStop(0, '#475569');
+  bombGrad.addColorStop(1, '#0f172a');
+  ctx.fillStyle = bombGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  // Glowing red danger core
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.36, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawCanvas() {
+  if (!currentLevel) return;
+  const W = 22, H = 12, S = 50;
+  const canvas = document.getElementById('boardCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (showGrid) {
+    ctx.strokeStyle = 'rgba(15, 23, 42, 0.10)';
+    ctx.lineWidth = 1;
+    ctx.font = '10px Segoe UI';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.42)';
+    for (let x = 0; x < W; x++) {
+      for (let y = 0; y < H; y++) {
+        const px = x * S, py = (H - 1 - y) * S;
+        ctx.strokeRect(px, py, S, S);
+        if (y === 0) ctx.fillText(x, px + 4, py + S - 4);
+        if (x === 0) ctx.fillText('y=' + y, px + 3, py + 12);
+      }
+    }
+  }
+
+  const wallSet = new Set();
+  currentLevel.bricks.forEach(b => { if (b.id === 1) wallSet.add(b.x + ',' + b.y); });
+
+  // Draw static bricks (walls, hazards, portals)
+  currentLevel.bricks.forEach(b => {
+    const px = b.x * S, py = (H - 1 - b.y) * S;
+    if (b.id === 1) {
+      ctx.fillStyle = '#854d0e';
+      ctx.fillRect(px + 1, py + 1, S - 2, S - 2);
+      ctx.fillStyle = '#a16207';
+      ctx.fillRect(px + 6, py + 10, S - 12, S - 16);
+      if (!wallSet.has(b.x + ',' + (b.y + 1))) {
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(px + 1, py + 1, S - 2, 10);
+      }
+    } else if (b.id === 7) {
+      drawGear(ctx, px, py, S);
+    } else if (b.id === 8) {
+      const cx = px + S/2, cy = py + S/2;
+      const grad = ctx.createRadialGradient(cx, cy, 3, cx, cy, S * 0.44);
+      grad.addColorStop(0, '#0f172a');
+      grad.addColorStop(0.6, '#6d28d9');
+      grad.addColorStop(1, '#c084fc');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, S * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    } else if ([3, 9, 10, 11].includes(b.id)) {
+      const rotMap = { 3: 0, 9: -90, 10: 180, 11: 90 };
+      drawThorn(ctx, px, py, S, rotMap[b.id] || 0);
+    }
+  });
+
+  const st = liveState || extractRawState(currentLevel);
+
+  // Draw dynamic stones
+  (st.stones || []).forEach(([sx, sy]) => {
+    const px = sx * S, py = (H - 1 - sy) * S;
+    ctx.fillStyle = '#64748b';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(px + 5, py + 5, S - 10, S - 10, 12);
+    ctx.fill(); ctx.stroke();
+  });
+
+  // Draw dynamic apples
+  (st.apples || []).forEach(([ax, ay]) => {
+    const px = ax * S, py = (H - 1 - ay) * S;
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(px + S/2, py + S/2 + 3, S * 0.34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#16a34a';
+    ctx.fillRect(px + S/2 - 2, py + 6, 4, 9);
+    ctx.beginPath();
+    ctx.ellipse(px + S/2 + 7, py + 10, 7, 4, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Draw connected worm body from tail to head
+  const body = st.body || [];
+  if (body.length > 1) {
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = S * 0.56;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    body.forEach(([bx, by], i) => {
+      const cx = bx * S + S/2, cy = (H - 1 - by) * S + S/2;
+      if (i === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+  }
+  for (let i = body.length - 1; i >= 0; i--) {
+    const [bx, by] = body[i];
+    const px = bx * S, py = (H - 1 - by) * S;
+    const isHead = i === 0;
+    ctx.fillStyle = isHead ? '#15803d' : '#22c55e';
+    ctx.strokeStyle = '#052e16';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(px + 4, py + 4, S - 8, S - 8, isHead ? 16 : 12);
+    ctx.fill(); ctx.stroke();
+    if (isHead) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(px + S * 0.36, py + S * 0.38, 5, 0, Math.PI * 2);
+      ctx.arc(px + S * 0.66, py + S * 0.38, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(px + S * 0.38, py + S * 0.38, 2.5, 0, Math.PI * 2);
+      ctx.arc(px + S * 0.68, py + S * 0.38, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Hints overlay
+  const hints = currentLevel.hints || [];
+  if (showHints && hints.length > 0) {
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.9)';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    hints.forEach((h, i) => {
+      const cx = h.x * S + S/2, cy = (H - 1 - h.y) * S + S/2;
+      if (i === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    });
+    ctx.stroke();
+  }
+
+  // Fatal impact / Deadlock visual overlay
+  const ev = st.event || '';
+  if (['trap', 'fall', 'crushed', 'deadlock', 'stuck'].includes(ev)) {
+    ctx.fillStyle = 'rgba(220, 38, 38, 0.22)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (body.length > 0) {
+      const [hx, hy] = body[0];
+      const cx = hx * S + S/2, cy = (H - 1 - Math.max(0, Math.min(H - 1, hy))) * S + S/2;
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.55)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, S * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const reasonMap = {
+      trap: '💥 CHẠM BOM / GAI NHỌN — MẤT MẠNG!',
+      fall: '💀 RƠI XUỐNG VỰC — MẤT MẠNG!',
+      crushed: '🪨 BỊ ĐÁ ĐÈ — MẤT MẠNG!',
+      deadlock: '🚫 KẸT CỨNG HẾT NƯỚC ĐI — PHẢI CHƠI LẠI!',
+      stuck: '🚫 KẸT CỨNG — PHẢI CHƠI LẠI!'
+    };
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(canvas.width / 2 - 250, canvas.height / 2 - 36, 500, 72, 14);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = 'bold 21px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText(reasonMap[ev] || '💀 THẤT BẠI!', canvas.width / 2, canvas.height / 2 - 4);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px Segoe UI';
+    ctx.fillText('Bắt buộc chơi lại từ đầu màn...', canvas.width / 2, canvas.height / 2 + 22);
+    ctx.textAlign = 'start';
+  }
+}
+
+/* Human Keyboard Play with Strict Gravity Animation & Mandatory Reset on Death */
+async function humanMove(action) {
+  if (busy || gameOverLock || editorMode || !currentLevel) return;
+  stopPlayback();
+  // Never allow continuing manual play from the middle of an AI replay
+  if (inReplayMode) {
+    await initLevelState();
+  }
+  if (!liveState) return;
+
+  gameOverLock = true; // Lock input during move & gravity settlement
+  const prevSnapshot = JSON.parse(JSON.stringify(liveState));
+  try {
+    const res = await fetch('/api/step', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        level: currentLevel,
+        body: liveState.body,
+        apples: liveState.apples,
+        stones: liveState.stones,
+        action: action
+      })
+    });
+    if (!res.ok) {
+      gameOverLock = false;
+      return;
+    }
+    const next = await res.json();
+    if (next.is_blocked) {
+      setStatus(`Chắn hướng (${next.event}) — hãy chọn hướng hợp lệ khác`);
+      gameOverLock = false;
+      return;
+    }
+
+    undoStack.push(prevSnapshot);
+    const subs = next.sub_frames && next.sub_frames.length > 0 ? next.sub_frames : [next];
+    // Animate row-by-row gravity falling!
+    for (let i = 0; i < subs.length; i++) {
+      liveState = subs[i];
+      drawCanvas();
+      if (i < subs.length - 1) {
+        setStatus(`⏬ Trọng lực kéo rơi...`);
+        await new Promise(r => setTimeout(r, 60));
+      }
+    }
+
+    if (next.is_win || next.event === 'win') {
+      setStatus('🎉 CHIẾN THẮNG! Đã chui vào cổng thành công! Bấm R để chơi lại.');
+      logMsg(`🎉 Người chơi qua màn thành công!`, 'win');
+      // Keep gameOverLock = true until user resets or selects next level
+      return;
+    }
+
+    if (next.is_fatal) {
+      setStatus(`💥 MẤT MẠNG (${next.event.toUpperCase()})! Tự động chơi lại từ đầu màn...`);
+      logMsg(`💀 Mất mạng (${next.event}) -> Bắt buộc chơi lại từ đầu màn!`, 'warn');
+      await new Promise(r => setTimeout(r, 900));
+      await initLevelState();
+      return;
+    }
+
+    setStatus(`Đang chơi · Nước đi hợp lệ (${undoStack.length} bước)`);
+    gameOverLock = false;
+  } catch (err) {
+    gameOverLock = false;
+  }
+}
+
+function resetPlay() {
+  stopPlayback();
+  gameOverLock = false;
+  initLevelState();
+}
+
+window.addEventListener('keydown', (e) => {
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  const keyMap = {
+    ArrowLeft: 1, a: 1, A: 1,
+    ArrowRight: 2, d: 2, D: 2,
+    ArrowUp: 3, w: 3, W: 3,
+    ArrowDown: 4, s: 4, S: 4
+  };
+  if (keyMap[e.key]) {
+    e.preventDefault();
+    humanMove(keyMap[e.key]);
+  } else if (e.key === 'r' || e.key === 'R') {
+    resetPlay();
+  } else if (!gameOverLock && !inReplayMode && (e.key === 'z' || e.key === 'Z') && undoStack.length > 0) {
+    liveState = undoStack.pop();
+    drawCanvas();
+    setStatus('Đã hoàn tác 1 bước');
+  }
+});
+
+/* Playback Engine & Policy HUD */
+function updatePolicyHUD(frame) {
+  const probs = frame && frame.probs ? frame.probs : [0.25, 0.25, 0.25, 0.25];
+  for (let i = 0; i < 4; i++) {
+    const pct = Math.round(probs[i] * 100);
+    document.getElementById('pb' + i).style.width = pct + '%';
+    document.getElementById('pb' + i).style.background = (frame && frame.action === i + 1) ? '#22c55e' : '#3b82f6';
+    document.getElementById('pt' + i).textContent = pct + '%';
+  }
+  document.getElementById('criticVal').textContent =
+    (frame && frame.value !== undefined) ? `V(s) = ${frame.value}` : 'V(s) = —';
+}
+
+function updatePlaybackControls(idx) {
+  playbackIdx = idx;
+  const maxIdx = Math.max(0, playbackFrames.length - 1);
+  const slider = document.getElementById('frameSlider');
+  slider.max = maxIdx;
+  slider.value = idx;
+  document.getElementById('frameLabel').textContent = `Bước: ${idx} / ${maxIdx}`;
+  if (playbackFrames[idx]) {
+    liveState = playbackFrames[idx];
+    updatePolicyHUD(liveState);
+    drawCanvas();
+  }
+}
+
+function scrubFrame(val) {
+  stopPlayback();
+  inReplayMode = true;
+  updatePlaybackControls(parseInt(val, 10));
+}
+
+function startPlayback(frames, bannerPrefix = 'AI đang đi') {
+  stopPlayback();
+  inReplayMode = true;
+  playbackFrames = frames || [];
+  if (!playbackFrames.length) return;
+  updatePlaybackControls(0);
+  const delay = parseInt(document.getElementById('speedSelect').value, 10) || 95;
+  playbackTimer = setInterval(() => {
+    if (playbackIdx < playbackFrames.length - 1) {
+      updatePlaybackControls(playbackIdx + 1);
+      const ev = playbackFrames[playbackIdx].event;
+      setStatus(`${bannerPrefix} · Bước ${playbackIdx}/${playbackFrames.length - 1} (${ev})`);
+    } else {
+      stopPlayback();
+      const lastEv = playbackFrames[playbackFrames.length - 1].event;
+      setStatus(`${bannerPrefix} kết thúc: ${lastEv.toUpperCase()} (${playbackFrames.length - 1} bước)`);
+    }
+  }, delay);
+}
+
+function stopPlayback() {
+  if (playbackTimer) {
+    clearInterval(playbackTimer);
+    playbackTimer = null;
+  }
+}
+
+function togglePlayback() {
+  if (playbackTimer) stopPlayback();
+  else if (playbackFrames.length > 1) {
+    if (playbackIdx >= playbackFrames.length - 1) playbackIdx = 0;
+    startPlayback(playbackFrames);
+  }
+}
+
+function switchAttemptView(idxStr) {
+  const item = savedAttempts[parseInt(idxStr, 10)];
+  if (!item) return;
+  startPlayback(item.frames, item.label);
+}
+
+/* AI Actions */
+async function runZeroShot() {
+  if (busy || !currentLevel) return;
+  busy = true;
+  const label = currentLevel.name || `${curPack}${currentLevel.id}`;
+  setStatus(`🤖 AI đang suy luận Zero-Shot trên ${label}...`);
+  try {
+    const res = await fetch('/api/ai/play', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level: currentLevel, name: label })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Lỗi chạy AI');
+    updateBrainStatusUI(data.status);
+    logMsg(
+      `[Zero-Shot] ${label}: ${data.won ? 'THẮNG ✅' : 'THUA ❌ (' + data.outcome + ')'} sau ${data.steps} bước`,
+      data.won ? 'win' : 'warn'
+    );
+    startPlayback(data.frames, `🤖 Zero-Shot ${label}`);
+  } catch (err) {
+    logMsg(`Lỗi: ${err.message}`, 'warn');
+  } finally {
+    busy = false;
+  }
+}
+
+async function runSelfTrainStage() {
+  if (busy || !currentLevel) return;
+  busy = true;
+  const label = currentLevel.name || `${curPack}${currentLevel.id}`;
+  setStatus(`🔥 AI đang tự chơi & tự train PPO sau màn ${label}...`);
+  logMsg(`Bắt đầu tự chơi & tự train màn ${label} (8 môi trường song song)...`, 'info');
+  savedAttempts = [];
+
+  try {
+    const res = await fetch('/api/ai/self_train_stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level: currentLevel, name: label, ppo_rounds: 3, envs: 8 })
+    });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const msg = JSON.parse(line);
+        if (msg.phase === 'zero_shot') {
+          logMsg(`  • Thử sức ban đầu: ${msg.outcome.toUpperCase()} (${msg.steps} bước)`, msg.won ? 'win' : 'warn');
+          if (msg.frames) savedAttempts.push({ label: `1. Trước Train (${msg.outcome})`, frames: msg.frames });
+        } else if (msg.phase === 'ppo_round') {
+          logMsg(
+            `  • PPO Vòng ${msg.round}/${msg.total_rounds}: loss=${msg.loss} | thắng rollout=${msg.rollout_wins} | greedy=${msg.greedy_outcome} (${msg.greedy_steps}b)`
+          );
+          if (msg.frames) savedAttempts.push({ label: `PPO Vòng ${msg.round} (${msg.greedy_outcome})`, frames: msg.frames });
+        } else if (msg.phase === 'consolidation') {
+          logMsg(
+            `  • Chưng cất & chống quên #${msg.pass}: loss=${msg.loss} | greedy=${msg.greedy_outcome} (${msg.greedy_steps}b)`,
+            msg.greedy_won ? 'win' : ''
+          );
+        } else if (msg.phase === 'complete') {
+          const s = msg.summary;
+          updateBrainStatusUI(msg.status);
+          if (s.after_frames) {
+            savedAttempts.push({ label: `★ Sau Tự Train (${s.after_train_outcome})`, frames: s.after_frames });
+            populateAttemptSelector();
+            startPlayback(s.after_frames, `🔥 Sau Tự Train ${label}`);
+          }
+          logMsg(
+            `✅ Hoàn tất tự train ${label} (${s.elapsed_sec}s): ${s.zero_shot_outcome} -> ${s.after_train_outcome.toUpperCase()} (${s.after_train_steps} bước)!`,
+            s.after_train_won ? 'win' : 'warn'
+          );
+        }
+      }
+    }
+  } catch (err) {
+    logMsg(`Lỗi tự train: ${err.message}`, 'warn');
+  } finally {
+    busy = false;
+  }
+}
+
+function populateAttemptSelector() {
+  const sel = document.getElementById('attemptSelect');
+  if (savedAttempts.length <= 1) {
+    sel.style.display = 'none';
+    return;
+  }
+  sel.style.display = 'inline-block';
+  sel.innerHTML = savedAttempts.map((a, i) => `<option value="${i}">${a.label}</option>`).join('');
+  sel.value = String(savedAttempts.length - 1);
+}
+
+/* Oracle & PCGRL Generation */
+function renderOracleCard(or) {
+  document.getElementById('orSolvable').textContent = or.solvable ? `✅ ${or.tier_name}` : '❌ Bế tắc';
+  document.getElementById('orSolvable').style.color = or.solvable ? '#4ade80' : '#ef4444';
+  document.getElementById('orScore').textContent = or.solvable ? `${or.difficulty_score} / 100` : '0';
+  document.getElementById('orSteps').textContent = or.solvable ? `${or.optimal_steps} bước` : '—';
+  document.getElementById('orMand').textContent = or.solvable ? `🍎${or.mandatory_apples} · 🪨${or.mandatory_stones}` : '—';
+}
+
+async function verifyCurrentMap() {
+  if (!currentLevel) return;
+  setStatus('⚖️ Oracle đang giải chính xác A* & kiểm chứng vật thể bắt buộc...');
+  const res = await fetch('/api/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level: currentLevel, name: 'editor_map' })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    logMsg(`Map chưa hợp lệ: ${data.detail}`, 'warn');
+    return;
+  }
+  const or = data.oracle;
+  currentLevel = data.cleaned_level;
+  currentLevel.oracle = or;
+  renderOracleCard(or);
+  await initLevelState();
+  logMsg(
+    `[Oracle] ${or.solvable ? 'GIẢI ĐƯỢC ✅' : 'KHÔNG GIẢI ĐƯỢC ❌'} | L*=${or.optimal_steps} | Điểm khó=${or.difficulty_score} (${or.tier_name}) | Táo bắt buộc=${or.mandatory_apples}, Đá=${or.mandatory_stones}`,
+    or.solvable ? 'win' : 'warn'
+  );
+}
+
+async function generateNewMap() {
+  if (busy) return;
+  busy = true;
+  const selVal = parseInt(document.getElementById('genTierSelect').value, 10);
+  const escalating = selVal === 0;
+  setStatus('✨ PCGRL Designer đang thiết kế & kiểm chứng Map mới...');
+  try {
+    const res = await fetch('/api/pcgrl/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier: escalating ? 1 : selVal, escalating })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Sinh map thất bại');
+    PACKS.G.push(data.level);
+    document.getElementById('genCount').textContent = PACKS.G.length;
+    updateBrainStatusUI(data.status);
+    diffHistory.push(data.oracle.difficulty_score);
+    drawDifficultyChart();
+
+    curPack = 'G';
+    document.getElementById('tabA').classList.remove('active');
+    document.getElementById('tabB').classList.remove('active');
+    document.getElementById('tabG').classList.add('active');
+    await selectLevel(PACKS.G.length - 1);
+    renderOracleCard(data.oracle);
+    logMsg(
+      `✨ Đã sinh Map ${data.level.name}: ${data.oracle.tier_name} (${data.oracle.difficulty_score}đ, L*=${data.oracle.optimal_steps} bước, 🍎=${data.oracle.mandatory_apples}, 🪨=${data.oracle.mandatory_stones})`,
+      'win'
+    );
+  } catch (err) {
+    logMsg(`Lỗi sinh map: ${err.message}`, 'warn');
+  } finally {
+    busy = false;
+  }
+}
+
+/* Auto Co-Evolution Dojo */
+async function toggleAutoCoevolve() {
+  autoCoevolve = !autoCoevolve;
+  const btn = document.getElementById('btnCoevolve');
+  btn.classList.toggle('active-toggle', autoCoevolve);
+  btn.textContent = autoCoevolve ? '⏹️ Dừng Auto Dojo' : '🚀 Auto Dojo (Sinh Map Khó Dần + Tự Học)';
+  if (autoCoevolve) {
+    logMsg('🚀 BẬT CHẾ ĐỘ CO-EVOLUTION DOJO: Sinh map khó dần -> AI tự chơi -> AI tự train liên tục!', 'info');
+    runCoevolveLoop();
+  }
+}
+
+async function runCoevolveLoop() {
+  while (autoCoevolve) {
+    if (busy) {
+      await new Promise(r => setTimeout(r, 400));
+      continue;
+    }
+    busy = true;
+    setStatus('🧬 Co-Evolution Dojo: Đang sinh Map mới khó hơn & huấn luyện Solver...');
+    try {
+      const res = await fetch('/api/coevolution/step', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Lỗi Co-Evolution');
+      PACKS.G.push(data.level);
+      document.getElementById('genCount').textContent = PACKS.G.length;
+      updateBrainStatusUI(data.status);
+
+      curPack = 'G';
+      document.getElementById('tabA').classList.remove('active');
+      document.getElementById('tabB').classList.remove('active');
+      document.getElementById('tabG').classList.add('active');
+      curIdx = PACKS.G.length - 1;
+      currentLevel = data.level;
+      renderSidebar();
+      renderOracleCard(data.oracle);
+
+      const rec = data.record;
+      logMsg(
+        `[Dojo #${rec.round}] ${rec.map_name} (${rec.tier_name} ${rec.difficulty_score}đ, L*=${rec.optimal_steps}) | Zero-Shot=${rec.zero_shot_won ? 'WIN' : 'FAIL'} -> Sau Train=${rec.after_train_won ? 'WIN ✅' : 'FAIL'} (${rec.after_train_steps}b) | Lên Tier ${rec.next_tier}`,
+        rec.after_train_won ? 'win' : 'warn'
+      );
+
+      if (data.summary && data.summary.after_frames) {
+        startPlayback(data.summary.after_frames, `🧬 Dojo #${rec.round} ${rec.map_name}`);
+        const waitMs = Math.min(4500, data.summary.after_frames.length * 85 + 700);
+        busy = false;
+        await new Promise(r => setTimeout(r, waitMs));
+      } else {
+        busy = false;
+      }
+    } catch (err) {
+      logMsg(`Dojo tạm dừng: ${err.message}`, 'warn');
+      busy = false;
+      autoCoevolve = false;
+      document.getElementById('btnCoevolve').classList.remove('active-toggle');
+      break;
+    }
+  }
+}
+
+/* Interactive Map Editor */
+function toggleEditor() {
+  editorMode = !editorMode;
+  document.getElementById('editorBar').classList.toggle('visible', editorMode);
+  document.getElementById('btnEditor').classList.toggle('active-toggle', editorMode);
+  if (editorMode) {
+    stopPlayback();
+    setStatus('🛠️ Chế độ Vẽ Map: Click lên lưới để đặt gạch/táo/đá/sâu, sau đó bấm Oracle Kiểm Chứng!');
+  } else {
+    initLevelState();
+  }
+}
+
+function selectBrush(id) {
+  selectedBrush = id;
+  document.querySelectorAll('.brush-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.brush, 10) === id);
+  });
+}
+
+function clearEditorCanvas() {
+  currentLevel = {
+    id: 999,
+    name: 'CustomMap',
+    width: 22,
+    height: 12,
+    bricks: [
+      {x:5,y:4,id:1},{x:6,y:4,id:1},{x:7,y:4,id:1},{x:8,y:4,id:1},
+      {x:12,y:5,id:1},{x:13,y:5,id:1},{x:14,y:5,id:1},
+      {x:7,y:5,id:5},{x:6,y:5,id:6},{x:5,y:5,id:6},
+      {x:8,y:6,id:4},{x:14,y:6,id:8}
+    ],
+    hints: []
+  };
+  liveState = extractRawState(currentLevel);
+  drawCanvas();
+}
+
+function paintAtEvent(e) {
+  if (!editorMode || !currentLevel) return;
+  const canvas = document.getElementById('boardCanvas');
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = Math.floor(((e.clientX - rect.left) * scaleX) / 50);
+  const y = 11 - Math.floor(((e.clientY - rect.top) * scaleY) / 50);
+  if (x < 0 || x >= 22 || y < 0 || y >= 12) return;
+
+  // Remove existing brick at (x, y)
+  currentLevel.bricks = currentLevel.bricks.filter(b => !(b.x === x && b.y === y));
+
+  if (selectedBrush === 5) {
+    // Place 3-segment horizontal worm starting at (x, y)
+    currentLevel.bricks = currentLevel.bricks.filter(b => b.id !== 5 && b.id !== 6);
+    const b1 = [Math.max(0, x - 1), y];
+    const b2 = [Math.max(0, x - 2), y];
+    currentLevel.bricks = currentLevel.bricks.filter(
+      b => !((b.x === b1[0] && b.y === b1[1]) || (b.x === b2[0] && b.y === b2[1]))
+    );
+    currentLevel.bricks.push({ x, y, id: 5 });
+    if (x >= 2) {
+      currentLevel.bricks.push({ x: x - 1, y, id: 6 });
+      currentLevel.bricks.push({ x: x - 2, y, id: 6 });
+    }
+  } else if (selectedBrush === 8) {
+    currentLevel.bricks = currentLevel.bricks.filter(b => b.id !== 8);
+    currentLevel.bricks.push({ x, y, id: 8 });
+  } else if (selectedBrush === 3) {
+    const walls = new Set(currentLevel.bricks.filter(b => b.id === 1).map(b => `${b.x},${b.y}`));
+    let hid = 7;
+    if (walls.has(`${x},${y - 1}`)) hid = 3;
+    else if (walls.has(`${x},${y + 1}`)) hid = 10;
+    else if (walls.has(`${x - 1},${y}`)) hid = 11;
+    else if (walls.has(`${x + 1},${y}`)) hid = 9;
+    currentLevel.bricks.push({ x, y, id: hid });
+  } else if (selectedBrush > 0) {
+    currentLevel.bricks.push({ x, y, id: selectedBrush });
+  }
+  currentLevel.hints = [];
+  liveState = extractRawState(currentLevel);
+  drawCanvas();
+}
+
+const bCanvas = document.getElementById('boardCanvas');
+bCanvas.addEventListener('mousedown', (e) => { isDraggingPaint = true; paintAtEvent(e); });
+bCanvas.addEventListener('mousemove', (e) => { if (isDraggingPaint && [0, 1].includes(selectedBrush)) paintAtEvent(e); });
+window.addEventListener('mouseup', () => { isDraggingPaint = false; });
+
+initApp();
+</script>
+</body>
+</html>
